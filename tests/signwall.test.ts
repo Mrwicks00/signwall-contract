@@ -280,6 +280,7 @@ describe("SignWall - Update Signature Tests", () => {
   });
 
   it("maintains signature-id after update", () => {
+    const currentBlock = simnet.blockHeight;
     // First sign
     simnet.callPublicFn(
       "signwall",
@@ -293,6 +294,15 @@ describe("SignWall - Update Signature Tests", () => {
       "get-signature",
       [Cl.principal(wallet1)],
       deployer
+    );
+
+    expect(originalSig.result).toBeSome(
+      Cl.tuple({
+        name: Cl.stringAscii("Alice"),
+        message: Cl.stringUtf8("Original"),
+        "block-height": Cl.uint(currentBlock),
+        "signature-id": Cl.uint(0),
+      })
     );
 
     // Update
@@ -309,22 +319,12 @@ describe("SignWall - Update Signature Tests", () => {
       [Cl.principal(wallet1)],
       deployer
     );
-
-    // Both should have signature-id of 0
-    expect(originalSig.result).toBeSome(
-      Cl.tuple({
-        name: Cl.stringAscii("Alice"),
-        message: Cl.stringUtf8("Original"),
-        "block-height": Cl.uint(simnet.blockHeight),
-        "signature-id": Cl.uint(0),
-      })
-    );
     
     expect(updatedSig.result).toBeSome(
       Cl.tuple({
         name: Cl.stringAscii("Alice Updated"),
         message: Cl.stringUtf8("Updated"),
-        "block-height": Cl.uint(simnet.blockHeight),
+        "block-height": Cl.uint(currentBlock),
         "signature-id": Cl.uint(0),
       })
     );
