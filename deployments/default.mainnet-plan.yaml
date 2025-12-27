@@ -9,9 +9,9 @@ plan:
     - id: 0
       transactions:
         - contract-publish:
-            contract-name: signwall
+            contract-name: signwallV2
             expected-sender: SP1GNDB8SXJ51GBMSVVXMWGTPRFHGSMWNNBEY25A4
-            cost: 38130
+            cost: 26110
             path: contracts/signwall.clar
             anchor-block-only: true
             clarity-version: 2
