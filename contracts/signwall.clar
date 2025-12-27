@@ -6,23 +6,18 @@
 ;; ============================================
 
 ;; --- Constants & Error Codes ---
-(define-constant ERR_ALREADY_SIGNED (err u100))
-(define-constant ERR_NOT_SIGNED_YET (err u101))
-(define-constant ERR_INVALID_INDEX (err u102))
-(define-constant ERR_UNDERFLOW (err u103))
-(define-constant ERR_EMPTY_MESSAGE (err u104))
+(define-constant ERR_INVALID_INDEX (err u100))
+(define-constant ERR_EMPTY_MESSAGE (err u101))
+(define-constant ERR_UNDERFLOW (err u102))
 
 ;; --- Data Structures ---
-;; Use a map to store signatures indexed by principal
-(define-map signatures principal {
+;; Use a map to store signatures indexed by ID (uint)
+(define-map signatures uint {
+  signer: principal,
   name: (string-ascii 50),
   message: (string-utf8 500),
-  block-height: uint,
-  signature-id: uint
+  block-height: uint
 })
-
-;; Track order of signatures
-(define-map signature-order uint principal)
 
 (define-data-var signature-count uint u0)
 (define-data-var general-counter uint u0)
@@ -30,23 +25,22 @@
 ;; --- Public Functions ---
 
 ;; 1. Sign the Wall
+;; Anyone can sign as many times as they want
 (define-public (sign (name (string-ascii 50)) (message (string-utf8 500)))
   (let
     (
       (current-count (var-get signature-count))
       (new-signature {
+        signer: tx-sender,
         name: name,
         message: message,
-        block-height: block-height,
-        signature-id: current-count
+        block-height: block-height
       })
     )
-    (asserts! (is-none (map-get? signatures tx-sender)) ERR_ALREADY_SIGNED)
     (asserts! (> (len name) u0) ERR_EMPTY_MESSAGE)
 
     (begin
-      (map-set signatures tx-sender new-signature)
-      (map-set signature-order current-count tx-sender)
+      (map-set signatures current-count new-signature)
       (var-set signature-count (+ current-count u1))
       
       ;; EVENT: New Signature Added
@@ -60,35 +54,6 @@
         height: block-height
       })
       
-      (ok true)
-    )
-  )
-)
-
-;; 2. Update existing signature
-(define-public (update-signature (name (string-ascii 50)) (message (string-utf8 500)))
-  (let
-    (
-      (existing (unwrap! (map-get? signatures tx-sender) ERR_NOT_SIGNED_YET))
-      (updated-signature {
-        name: name,
-        message: message,
-        block-height: block-height,
-        signature-id: (get signature-id existing)
-      })
-    )
-    (begin
-      (map-set signatures tx-sender updated-signature)
-      
-      ;; EVENT: Signature Updated
-      (print {
-        event: "updated-signature",
-        signer: tx-sender,
-        new-name: name,
-        new-message: message,
-        updated-at: block-height
-      })
-
       (ok true)
     )
   )
@@ -135,23 +100,12 @@
 
 ;; --- Read Only Functions ---
 
-(define-read-only (get-signature (user principal))
-  (map-get? signatures user)
-)
-
 (define-read-only (get-signature-by-index (index uint))
-  (match (map-get? signature-order index)
-    signer (map-get? signatures signer)
-    none
-  )
+  (map-get? signatures index)
 )
 
 (define-read-only (get-signature-count) 
   (var-get signature-count)
-)
-
-(define-read-only (has-signed (user principal)) 
-  (is-some (map-get? signatures user))
 )
 
 (define-read-only (get-general-counter) 
